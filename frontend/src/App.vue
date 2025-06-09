@@ -1,27 +1,19 @@
-<template>
-<!-- html -->
-  <div>
-    <ul>
-      <li v-for="todo in todos" :key="todo.id">{{ todo.title }}</li>
-    </ul>
-  </div>
-</template>
+<script setup>
+import { ref, onMounted } from 'vue'
 
-<script>
-// js
-import axios from 'axios'
+const todos = ref([])
 
-export default {
-  data() {
-    return {
-      todos: []
-    }
-  },
-  mounted() {
-    axios.get('http://localhost:3000/todos')
-      .then(response => {
-        this.todos = response.data
-      })
-  }
-}
+onMounted(async () => {
+  const res = await fetch('http://localhost:3000/todos', {
+    mode: 'cors'
+  })
+  todos.value = await res.json()
+})
 </script>
+
+<template>
+  <h1>Todos</h1>
+  <ul>
+    <li v-for="todo in todos" :key="todo.id">{{ todo.title }}</li>
+  </ul>
+</template>
