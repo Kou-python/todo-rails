@@ -1,0 +1,11 @@
+{
+	"name": "todo-rails",
+	"version": "1.0.0",
+	"scripts": {
+		"dev": "concurrently \"cd backend && rails server\" \"cd frontend && npm run dev\"",
+		"install:all": "cd backend && bundle install && cd ../frontend && npm install"
+	},
+	"devDependencies": {
+		"concurrently": "^8.2.0"
+	}
+}

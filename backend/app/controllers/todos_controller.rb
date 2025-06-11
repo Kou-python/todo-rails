@@ -20,7 +20,7 @@ class TodosController < ApplicationController
     else
       # Debugging: Log the errors if saving fails
       Rails.logger.debug "Todo errors: #{@todo.errors.full_messages}"
-      render json: @todo.errors, status: :unprocessable_entity
+      render json: { errors: @todo.errors }, status: :unprocessable_entity
     end
   end
 
