@@ -17,4 +17,14 @@ export default defineConfig({
 			"/todos": "http://localhost:3000",
 		},
 	},
+	test: {
+		environment: "happy-dom",
+		globals: true,
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "json", "html"],
+			exclude: ["node_modules/", "src/tests/", "*.config.js"],
+			include: ["src/**/*.{js,vue}"],
+		},
+	},
 });
