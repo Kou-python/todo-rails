@@ -1,0 +1,82 @@
+name: Full Stack CI
+
+on:
+    push:
+        branches: ["main", "develop"]
+    pull_request:
+        branches: ["main", "develop"]
+    workflow_dispatch:
+
+jobs:
+    backend:
+        uses: ./.github/workflows/ruby.yml
+
+    frontend:
+        uses: ./.github/workflows/frontend.yml
+
+    integration:
+        runs-on: ubuntu-latest
+        name: Integration Tests
+        needs: [backend, frontend]
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Ruby
+              uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.2"
+                  bundler-cache: true
+                  working-directory: backend
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+                  cache: "npm"
+                  cache-dependency-path: frontend/package-lock.json
+
+            - name: Install backend dependencies
+              run: |
+                  cd backend
+                  bundle install
+
+            - name: Install frontend dependencies
+              run: |
+                  cd frontend
+                  npm ci
+
+            - name: Setup test database
+              run: |
+                  cd backend
+                  bundle exec rails db:create RAILS_ENV=test
+                  bundle exec rails db:migrate RAILS_ENV=test
+
+            - name: Build frontend
+              run: |
+                  cd frontend
+                  npm run build
+
+            - name: Start backend server
+              run: |
+                  cd backend
+                  bundle exec rails server -e test -p 3000 &
+                  sleep 10
+              env:
+                  RAILS_ENV: test
+
+            - name: Run integration tests
+              run: |
+                  cd backend
+                  bundle exec rspec spec/system/ --format documentation
+
+            - name: Upload test artifacts
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: integration-test-results
+                  path: |
+                      backend/tmp/screenshots/
+                      backend/log/test.log

@@ -1,5 +1,9 @@
 # Todo Rails アプリケーション
 
+[![Ruby CI](https://github.com/koseisasagawa/todo-rails/workflows/Ruby%20CI/badge.svg)](https://github.com/koseisasagawa/todo-rails/actions/workflows/ruby.yml)
+[![Frontend CI](https://github.com/koseisasagawa/todo-rails/workflows/Frontend%20CI/badge.svg)](https://github.com/koseisasagawa/todo-rails/actions/workflows/frontend.yml)
+[![Full Stack CI](https://github.com/koseisasagawa/todo-rails/workflows/Full%20Stack%20CI/badge.svg)](https://github.com/koseisasagawa/todo-rails/actions/workflows/full-stack.yml)
+
 Vue.js（フロントエンド）と Ruby on Rails（バックエンド API）を使用したモダンな Todo アプリケーションです。
 
 ## 🎯 プロジェクト概要

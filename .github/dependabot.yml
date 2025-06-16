@@ -1,0 +1,32 @@
+version: 2
+updates:
+    # Ruby dependencies (backend)
+    - package-ecosystem: "bundler"
+      directory: "/backend"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+          time: "09:00"
+      open-pull-requests-limit: 5
+      reviewers:
+          - "@koseisasagawa"
+
+    # JavaScript dependencies (frontend)
+    - package-ecosystem: "npm"
+      directory: "/frontend"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+          time: "09:00"
+      open-pull-requests-limit: 5
+      reviewers:
+          - "@koseisasagawa"
+
+    # GitHub Actions
+    - package-ecosystem: "github-actions"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+          time: "09:00"
+      open-pull-requests-limit: 3
