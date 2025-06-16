@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  backend_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,3 +20,47 @@ jobs:
         run: cd backend && bundle install
       - name: Run tests
         run: cd backend && bundle exec rails test
+  backend_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.4'
+          bundler-cache: true
+      - name: Run RuboCop
+        run: cd backend && bundle exec rubocop --format json --out rubocop-report.json
+      - name: Upload RuboCop report
+        uses: actions/upload-artifact@v4
+        with:
+          name: rubocop-report
+          path: backend/rubocop-report.json
+  frontend_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run tests
+        run: cd frontend && npm test
+  frontend_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run ESLint
+        run: cd frontend && npm run lint
