@@ -54,33 +54,7 @@ describe('App.vue - API操作テスト', () => {
 			});
 		});
 
-		it('追加エラー時にエラーメッセージが表示される', async () => {
-			// 初期fetch
-			fetch.mockResolvedValueOnce({
-				ok: true,
-				json: async () => [],
-			});
-
-			// addTodo API エラー
-			fetch.mockResolvedValueOnce({
-				ok: false,
-				json: async () => ({ error: 'バリデーションエラー' }),
-			});
-
-			wrapper = mount(App);
-			await wrapper.vm.$nextTick();
-
-			const input = wrapper.find('.todo-input');
-			await input.setValue('新しいTODO');
-
-			const form = wrapper.find('.add-form');
-			await form.trigger('submit.prevent');
-
-			// エラーを待機
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			expect(wrapper.vm.error).toBe('TODOの追加に失敗しました');
-		});
+		// 追加エラー時にエラーメッセージが表示されるテストは1つにまとめられています。
 	});
 
 	describe('TODO更新', () => {
