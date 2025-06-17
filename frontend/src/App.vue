@@ -1,65 +1,65 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted } from 'vue';
 
 const todos = ref([]);
-const newTitle = ref("");
-const error = ref("");
+const newTitle = ref('');
+const error = ref('');
 
 const fetchTodos = async () => {
 	try {
-		const res = await fetch("/todos", { mode: "cors" });
-		if (!res.ok) throw new Error("API error");
+		const res = await fetch('/todos', { mode: 'cors' });
+		if (!res.ok) throw new Error('API error');
 		todos.value = await res.json();
-	} catch (e) {
-		error.value = "TODOの取得に失敗しました";
+	} catch {
+		error.value = 'TODOの取得に失敗しました';
 	}
 };
 
 const addTodo = async () => {
 	if (!newTitle.value.trim()) return;
 	try {
-		const res = await fetch("/todos/", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
+		const res = await fetch('/todos/', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ todo: { title: newTitle.value, is_completed: false } }),
 		});
 		if (!res.ok) {
 			const err = await res.json();
-			throw new Error(err?.title || "API error");
+			throw new Error(err?.title || 'API error');
 		}
-		newTitle.value = "";
+		newTitle.value = '';
 		await fetchTodos();
-	} catch (e) {
-		error.value = "TODOの追加に失敗しました";
+	} catch {
+		error.value = 'TODOの追加に失敗しました';
 	}
 };
 
 const updateTodo = async (todo) => {
 	try {
 		const res = await fetch(`/todos/${todo.id}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ todo: { ...todo, is_completed: !todo.is_completed } }),
 		});
 		if (!res.ok) {
 			const err = await res.json();
-			throw new Error(err?.title || "API error");
+			throw new Error(err?.title || 'API error');
 		}
 		await fetchTodos();
-	} catch (e) {
-		error.value = "TODOの更新に失敗しました";
+	} catch {
+		error.value = 'TODOの更新に失敗しました';
 	}
 };
 
 const deleteTodo = async (id) => {
 	try {
 		const res = await fetch(`/todos/${id}`, {
-			method: "DELETE",
+			method: 'DELETE',
 		});
-		if (!res.ok) throw new Error("API error");
+		if (!res.ok) throw new Error('API error');
 		await fetchTodos();
-	} catch (e) {
-		error.value = "TODOの削除に失敗しました";
+	} catch {
+		error.value = 'TODOの削除に失敗しました';
 	}
 };
 
@@ -67,40 +67,78 @@ onMounted(fetchTodos);
 </script>
 
 <template>
-	<div class="app-container">
-		<div class="header">
-			<h1>TODOリスト</h1>
-		</div>
+  <div class="app-container">
+    <div class="header">
+      <h1>TODOリスト</h1>
+    </div>
 
-		<div v-if="error" class="error-message">{{ error }}</div>
+    <div
+      v-if="error"
+      class="error-message"
+    >
+      {{ error }}
+    </div>
 
-		<div class="add-todo-section">
-			<form @submit.prevent="addTodo" class="add-form">
-				<input v-model="newTitle" placeholder="新しいTODOを追加" class="todo-input" required />
-				<button type="submit" class="add-button">追加</button>
-			</form>
-		</div>
+    <div class="add-todo-section">
+      <form
+        class="add-form"
+        @submit.prevent="addTodo"
+      >
+        <input
+          v-model="newTitle"
+          placeholder="新しいTODOを追加"
+          class="todo-input"
+          required
+        >
+        <button
+          type="submit"
+          class="add-button"
+        >
+          追加
+        </button>
+      </form>
+    </div>
 
-		<div class="todos-section">
-			<div v-if="todos.length === 0" class="empty-state">TODOがありません。新しいTODOを追加してください。</div>
-			<div v-else class="todos-list">
-				<div v-for="todo in todos" :key="todo.id" class="todo-item">
-					<label class="todo-label">
-						<input
-							type="checkbox"
-							:checked="todo.is_completed"
-							@change="updateTodo(todo)"
-							class="todo-checkbox"
-						/>
-						<span :class="{ completed: todo.is_completed }" class="todo-text">
-							{{ todo.title }}
-						</span>
-					</label>
-					<button @click="deleteTodo(todo.id)" class="delete-button">削除</button>
-				</div>
-			</div>
-		</div>
-	</div>
+    <div class="todos-section">
+      <div
+        v-if="todos.length === 0"
+        class="empty-state"
+      >
+        TODOがありません。新しいTODOを追加してください。
+      </div>
+      <div
+        v-else
+        class="todos-list"
+      >
+        <div
+          v-for="todo in todos"
+          :key="todo.id"
+          class="todo-item"
+        >
+          <label class="todo-label">
+            <input
+              type="checkbox"
+              :checked="todo.is_completed"
+              class="todo-checkbox"
+              @change="updateTodo(todo)"
+            >
+            <span
+              :class="{ completed: todo.is_completed }"
+              class="todo-text"
+            >
+              {{ todo.title }}
+            </span>
+          </label>
+          <button
+            class="delete-button"
+            @click="deleteTodo(todo.id)"
+          >
+            削除
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>

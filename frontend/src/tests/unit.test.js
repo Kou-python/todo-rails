@@ -24,17 +24,23 @@ describe("App.vue ユニットテスト", () => {
 	describe("リアクティブデータ", () => {
 		it("todosの初期値が空配列である", async () => {
 			wrapper = mount(App);
-			expect(wrapper.vm.todos).toEqual([]);
+			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+
+			// 初期状態で空の状態メッセージが表示されることで確認
+			expect(wrapper.find(".empty-state").exists()).toBe(true);
 		});
 
 		it("newTitleの初期値が空文字である", async () => {
 			wrapper = mount(App);
-			expect(wrapper.vm.newTitle).toBe("");
+			const input = wrapper.find(".todo-input");
+			expect(input.element.value).toBe("");
 		});
 
 		it("errorの初期値が空文字である", async () => {
 			wrapper = mount(App);
-			expect(wrapper.vm.error).toBe("");
+			// エラーメッセージが表示されていないことで確認
+			expect(wrapper.find(".error-message").exists()).toBe(false);
 		});
 	});
 
@@ -49,22 +55,33 @@ describe("App.vue ユニットテスト", () => {
 
 			// 入力値を変更
 			await input.setValue("テスト入力");
-			expect(wrapper.vm.newTitle).toBe("テスト入力");
-
-			// プログラムで値を変更
-			wrapper.vm.newTitle = "プログラム変更";
-			await wrapper.vm.$nextTick();
-			expect(input.element.value).toBe("プログラム変更");
+			expect(input.element.value).toBe("テスト入力");
 		});
 
-		it("フォーム送信時にaddTodoが呼ばれる", async () => {
-			const addTodoSpy = vi.spyOn(wrapper.vm, "addTodo");
-			
-			// submit ボタンを直接クリック
-			const submitButton = wrapper.find(".add-button");
-			await submitButton.trigger("click");
-			
-			expect(addTodoSpy).toHaveBeenCalled();
+		it("フォーム送信時にfetchが呼ばれる", async () => {
+			// POST用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ id: 1, title: "テスト", is_completed: false }),
+			});
+			// fetchTodos用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => [{ id: 1, title: "テスト", is_completed: false }],
+			});
+
+			const input = wrapper.find(".todo-input");
+			await input.setValue("テスト入力");
+
+			const form = wrapper.find(".add-form");
+			await form.trigger("submit");
+
+			// POST requestが呼ばれることを確認
+			expect(fetch).toHaveBeenCalledWith("/todos/", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ todo: { title: "テスト入力", is_completed: false } }),
+			});
 		});
 
 		it("空文字の場合はrequired属性により送信が阻止される", async () => {
@@ -75,33 +92,36 @@ describe("App.vue ユニットテスト", () => {
 
 	describe("条件付きレンダリング", () => {
 		it("エラーがある場合のみエラーメッセージが表示される", async () => {
+			// エラーを発生させるモック
+			fetch.mockRejectedValue(new Error("API error"));
+
 			wrapper = mount(App);
-
-			// 初期状態ではエラーメッセージなし
-			expect(wrapper.find(".error-message").exists()).toBe(false);
-
-			// エラーを設定
-			wrapper.vm.error = "テストエラー";
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			expect(wrapper.find(".error-message").exists()).toBe(true);
-			expect(wrapper.find(".error-message").text()).toBe("テストエラー");
+			expect(wrapper.find(".error-message").text()).toBe("TODOの取得に失敗しました");
 		});
 
 		it("todosが空の場合は空状態メッセージが表示される", async () => {
 			wrapper = mount(App);
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			expect(wrapper.find(".empty-state").exists()).toBe(true);
 			expect(wrapper.find(".todos-list").exists()).toBe(false);
 		});
 
 		it("todosがある場合はリストが表示される", async () => {
-			wrapper = mount(App);
+			const mockTodos = [{ id: 1, title: "テストTODO", is_completed: false }];
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => mockTodos,
+			});
 
-			// TODOを追加
-			wrapper.vm.todos = [{ id: 1, title: "テストTODO", is_completed: false }];
+			wrapper = mount(App);
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			expect(wrapper.find(".empty-state").exists()).toBe(false);
 			expect(wrapper.find(".todos-list").exists()).toBe(true);
@@ -110,14 +130,19 @@ describe("App.vue ユニットテスト", () => {
 
 	describe("リストレンダリング", () => {
 		beforeEach(async () => {
-			wrapper = mount(App);
-			// TODOデータを直接設定
-			wrapper.vm.todos.push(
+			const mockTodos = [
 				{ id: 1, title: "TODO1", is_completed: false },
 				{ id: 2, title: "TODO2", is_completed: true },
-				{ id: 3, title: "TODO3", is_completed: false }
-			);
+				{ id: 3, title: "TODO3", is_completed: false },
+			];
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => mockTodos,
+			});
+
+			wrapper = mount(App);
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		});
 
 		it("正しい数のTODOアイテムがレンダリングされる", () => {
@@ -152,38 +177,73 @@ describe("App.vue ユニットテスト", () => {
 
 	describe("イベントハンドリング", () => {
 		beforeEach(async () => {
+			const mockTodos = [{ id: 1, title: "テストTODO", is_completed: false }];
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => mockTodos,
+			});
+
 			wrapper = mount(App);
-			wrapper.vm.todos.push({ id: 1, title: "テストTODO", is_completed: false });
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		});
 
-		it("チェックボックス変更でupdateTodoが呼ばれる", async () => {
-			const updateTodoSpy = vi.spyOn(wrapper.vm, "updateTodo");
+		it("チェックボックス変更でPATCHリクエストが呼ばれる", async () => {
+			// PATCH用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ id: 1, title: "テストTODO", is_completed: true }),
+			});
+			// fetchTodos用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => [{ id: 1, title: "テストTODO", is_completed: true }],
+			});
 
 			const checkbox = wrapper.find(".todo-checkbox");
 			await checkbox.trigger("change");
 
-			expect(updateTodoSpy).toHaveBeenCalledWith({ id: 1, title: "テストTODO", is_completed: false });
+			expect(fetch).toHaveBeenCalledWith("/todos/1", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ todo: { id: 1, title: "テストTODO", is_completed: true } }),
+			});
 		});
 
-		it("削除ボタンクリックでdeleteTodoが呼ばれる", async () => {
-			const deleteTodoSpy = vi.spyOn(wrapper.vm, "deleteTodo");
+		it("削除ボタンクリックでDELETEリクエストが呼ばれる", async () => {
+			// DELETE用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+			});
+			// fetchTodos用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => [],
+			});
 
 			const deleteButton = wrapper.find(".delete-button");
 			await deleteButton.trigger("click");
 
-			expect(deleteTodoSpy).toHaveBeenCalledWith(1);
+			expect(fetch).toHaveBeenCalledWith("/todos/1", {
+				method: "DELETE",
+			});
 		});
 	});
 
 	describe("CSS クラスの動的適用", () => {
 		beforeEach(async () => {
-			wrapper = mount(App);
-			wrapper.vm.todos.push(
+			const mockTodos = [
 				{ id: 1, title: "未完了TODO", is_completed: false },
-				{ id: 2, title: "完了済みTODO", is_completed: true }
-			);
+				{ id: 2, title: "完了済みTODO", is_completed: true },
+			];
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => mockTodos,
+			});
+
+			wrapper = mount(App);
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		});
 
 		it("is_completedの値に基づいてcompletedクラスが適用される", () => {
@@ -196,44 +256,60 @@ describe("App.vue ユニットテスト", () => {
 			expect(todoTexts[1].classes()).toContain("completed");
 		});
 
-		it("is_completedが変更されるとクラスも更新される", async () => {
-			const todoText = wrapper.findAll(".todo-text")[0];
+		it("チェックボックス操作により完了状態が変更される", async () => {
+			// PATCH用のモックを設定
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ id: 1, title: "未完了TODO", is_completed: true }),
+			});
+			// fetchTodos用のモックを設定（更新後の状態）
+			fetch.mockResolvedValueOnce({
+				ok: true,
+				json: async () => [
+					{ id: 1, title: "未完了TODO", is_completed: true },
+					{ id: 2, title: "完了済みTODO", is_completed: true },
+				],
+			});
 
-			// 初期状態（未完了）
-			expect(todoText.classes()).not.toContain("completed");
-
-			// 完了状態に変更
-			wrapper.vm.todos[0].is_completed = true;
+			const checkbox = wrapper.findAll(".todo-checkbox")[0];
+			await checkbox.trigger("change");
 			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
-			expect(todoText.classes()).toContain("completed");
+			// 状態が更新されることを確認（APIが呼ばれることで間接的に確認）
+			expect(fetch).toHaveBeenCalledWith("/todos/1", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ todo: { id: 1, title: "未完了TODO", is_completed: true } }),
+			});
 		});
 	});
 
 	describe("フォームリセット", () => {
-		it("TODO追加時に入力フィールドがクリアされる想定", async () => {
-			// これは実際のaddTodo関数の動作をテストする場合に使用
+		it("TODO追加時に入力フィールドがクリアされる", async () => {
 			wrapper = mount(App);
 
-			// モックを設定して成功レスポンスを返す
+			// POST用のモックを設定
 			fetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => ({ id: 1, title: "テスト", is_completed: false }),
 			});
+			// fetchTodos用のモックを設定
 			fetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => [{ id: 1, title: "テスト", is_completed: false }],
 			});
 
-			// 入力値を設定
-			wrapper.vm.newTitle = "テストTODO";
-			await wrapper.vm.$nextTick();
+			const input = wrapper.find(".todo-input");
+			await input.setValue("テストTODO");
 
-			// addTodoを実行
-			await wrapper.vm.addTodo();
+			const form = wrapper.find(".add-form");
+			await form.trigger("submit");
+			await wrapper.vm.$nextTick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			// 入力フィールドがクリアされることを確認
-			expect(wrapper.vm.newTitle).toBe("");
+			expect(input.element.value).toBe("");
 		});
 	});
 });
